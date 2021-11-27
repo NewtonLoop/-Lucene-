@@ -1,56 +1,76 @@
 package com.example.demo.controller;
 
-import com.alibaba.fastjson.JSON;
+
 import com.alibaba.fastjson.JSONArray;
+import com.example.demo.pojo.Poem;
+import com.example.demo.pojo.Stitching_Poetry;
+import com.example.demo.service.SearchService;
+import com.example.demo.service.SearchServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-import com.example.demo.pojo.Prose;
-import com.example.demo.service.SearchService;
-import com.example.demo.service.SearchServiceImpl;
 
+import javax.rmi.CORBA.Util;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-/**
- *
- */
 @Controller
-@RequestMapping(value = "/do/prose")
+@RequestMapping(value = "/Haizi")
 public class SearchController {
 
     @Autowired
-    private SearchService searchService;
+    private SearchService all_searchService;
+    @Autowired
+    private SearchService stitching_searchService;
+    @Autowired
+    private SearchService short_searchService;
+    @Autowired
+    private SearchService medium_searchService;
+    @Autowired
+    private SearchService long_searchService;
 
-    private SearchServiceImpl searchServiceimpl;
-    private String title;
-    private String author;
-    private String contain;
+    private String all_title;
+    private String all_label;
+    private String all_contain;
+
+    private String stitching_key;
+
 
     /**
      *
      * @param qtitle
-     * @param qauthor
+     * @param qlabel
      * @param qcontain
-     * @return
+     * @throws Exception
      */
 
-    @PostMapping("/test")
+    @PostMapping("/Allsearch")
     @ResponseBody
-    public void save(@RequestParam("title") String qtitle,
-                       @RequestParam("author") String qauthor,
-                     @RequestParam("contain") String qcontain) throws Exception {
-        this.title = qtitle;
-        this.author = qauthor;
-        this.contain = qcontain;
+    public void getAllSearch(@RequestParam("title") String qtitle,
+                             @RequestParam("label") String qlabel,
+                             @RequestParam("contain") String qcontain) throws Exception{
+        this.all_title = qtitle;
+        this.all_label = qlabel;
+        this.all_contain = qcontain;
 
-        searchService.query(qtitle, qauthor,qcontain,1);
-
-        System.out.println("书名：" + this.title + ", 作者: " + this.author + "  " + this.contain);
-
+        System.out.println("client post AllSearch\n title: " + this.all_title + "\nlabel: " + this.all_label + "\ncontain" + this.all_contain);
     }
+
+
+    /**
+     *
+     * @param qkey
+     */
+
+    @PostMapping("/Stitching")
+    @ResponseBody
+    public void getStitchingSearch(@RequestParam("key") String qkey){
+        this.stitching_key = qkey;
+        System.out.println("Client post StitchingSearch: " + this.stitching_key);
+    }
+
 
     /**
      *
@@ -58,128 +78,115 @@ public class SearchController {
      * @throws Exception
      */
 
-    @GetMapping("/test")
+    @GetMapping("/Allsearch/get")
     @ResponseBody
-    public String testget() throws Exception {
-        searchService = new SearchServiceImpl();
-        List<Prose> list = searchService.query(this.title, this.author, this.contain,10);
-        List<Prose> query = new ArrayList<>();
-        if(StringUtils.isEmpty(this.title) && StringUtils.isEmpty(this.contain)){
-            Random r = new Random();
-            int size;
-            if(list.size() < 50)
-                size = list.size();
-            else
-                size = 50;
-            for (int i = 0; i < size; i ++){
-                int j = r.nextInt(list.size() - 1);
-                query.add(list.get(j));
-            }
-            list = query;
-        }
-        Object obg = JSONArray.toJSON(list);
+    public String postAllSearch() throws Exception {
+        all_searchService = new SearchServiceImpl();
+        List<Poem> poems = new ArrayList<>();
+        poems = all_searchService.query_all(this.all_title, this.all_label, this.all_contain, 30);
+        Object obg = JSONArray.toJSON(poems);
         String result = obg.toString();
         return result;
     }
 
 
+
     /**
-     * 搜索
-     * @param qt   查询的类型
-     * @param qa        查询关键字
-     * @param qc
-     * @param page          当前页
+     *
      * @return
      * @throws Exception
      */
-    @RequestMapping(value = "/proseAll", method = RequestMethod.GET)
+
+    @GetMapping("/Stitching/get")
     @ResponseBody
-    public List<Prose> query(String qt, String qa, String qc,Integer page) throws Exception{
+    public String postStitchingSearch() throws Exception{
+        stitching_searchService = new SearchServiceImpl();
+        List<Stitching_Poetry> stitching_poetries = new ArrayList<>();
 
-        //处理当前页
-//        if (StringUtils.isEmpty(page)) {
-//            page = 1;
-//        }
-//        if (page <= 0) {
-//            page = 1;
-//        }
+        if(!StringUtils.isEmpty(this.stitching_key))
+            stitching_poetries = stitching_searchService.query_stitching(this.stitching_key, 50);
 
-        //调用service查询
-        searchService = new SearchServiceImpl();
-        List<Prose>  list = new ArrayList<>();
-//        List<Prose>  list= searchService.query(category, querystring, page);
+        Random r = new Random();
+        List<Stitching_Poetry> stitching = stitching_searchService.query_stitching("", 2000);
 
-        list= searchService.query("夏天","汪曾祺", "都是", 1);
-
-//        model.addAttribute("result", resultModel);
-//
-//        for(Prose prose : list){
-//            System.out.println(prose.getTitle());
-//        }
-//
-//        //查询条件回显到页面
-//        model.addAttribute("queryString", queryString);
-//        model.addAttribute("price", price);
-//        model.addAttribute("page", page);
-        return list;
+        for(int i = 0; i < 20; i ++){
+            int j = r.nextInt(stitching.size()-1);
+            stitching_poetries.add(stitching.get(j));
+        }
+        Object obg = JSONArray.toJSON(stitching_poetries);
+        String result = obg.toString();
+        return result;
     }
 
-    @RequestMapping(value = "/prose", method = RequestMethod.GET)
+    /**
+     *
+     * @return
+     * @throws Exception
+     */
+
+    @GetMapping("/random/get")
     @ResponseBody
-    public String test(){
-        return "success!";
+    public String postRandomSearch() throws Exception{
+        Random r = new Random();
+        stitching_searchService = new SearchServiceImpl();
+        List<Stitching_Poetry> stitching_random = new ArrayList<>();
+        List<Stitching_Poetry> stitching = stitching_searchService.query_stitching("", 2000);
+        List<Stitching_Poetry> pomes = new ArrayList<>();
+        for(int i = 0; i < 20; i ++){
+            int j = r.nextInt(stitching_random.size()-1);
+            stitching_random.add(stitching.get(j));
+        }
+
+
+
+        Object obg = JSONArray.toJSON(stitching_random);
+        String result = obg.toString();
+        return result;
     }
 
-    static class ParamDemo{
-        private String param1;
-        private String param2;
-
-        public String getParam1() {
-            return param1;
-        }
-
-        public void setParam1(String param1) {
-            this.param1 = param1;
-        }
-
-        public String getParam2() {
-            return param2;
-        }
-
-        public void setParam2(String param2) {
-            this.param2 = param2;
-        }
+    /**
+     *
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping(value = "/short/get", method = RequestMethod.GET)
+    @ResponseBody
+    public List<Poem> postShort() throws Exception {
+        short_searchService = new SearchServiceImpl();
+        List<Poem> poems = new ArrayList<>();
+        poems = all_searchService.query_all("", "短篇", "", 232);
+        return poems;
     }
 
-    static class QueryProse{
-        private String title;
-        private String contain;
-        private String author;
-
-        public String getTitle() {
-            return title;
-        }
-
-        public String getContain() {
-            return contain;
-        }
-
-        public String getAuthor() {
-            return author;
-        }
-
-        public void setTitle(String title) {
-            this.title = title;
-        }
-
-        public void setContain(String contain) {
-            this.contain = contain;
-        }
-
-        public void setAuthor(String author) {
-            this.author = author;
-        }
-
+    /**
+     *
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping(value = "/medium/get", method = RequestMethod.GET)
+    @ResponseBody
+    public List<Poem> postMedium() throws Exception {
+        medium_searchService = new SearchServiceImpl();
+        List<Poem> poems = new ArrayList<>();
+        poems = all_searchService.query_all("", "文论", "", 20);
+        return poems;
     }
+
+    /**
+     *
+     * @return
+     * @throws Exception
+     */
+    @RequestMapping(value = "/long/get", method = RequestMethod.GET)
+    @ResponseBody
+    public String postLong() throws Exception {
+        long_searchService = new SearchServiceImpl();
+        List<Poem> poems = new ArrayList<>();
+        poems = all_searchService.query_all("", "长篇", "", 20);
+        Object obg = JSONArray.toJSON(poems);
+        String result = obg.toString();
+        return result;
+    }
+
 
 }
